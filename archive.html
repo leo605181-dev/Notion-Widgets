@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="zh-TW"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>已完成封存｜Archive</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:16px;background:transparent;color:#4a2f14;font-family:"Noto Serif TC","Songti TC",serif;font-weight:700}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+input{flex:1;min-width:140px;padding:10px 12px;border:3px solid #3a2a14;border-radius:10px;background:#f6e6bf;color:#4a2f14;font:inherit}
+button{padding:10px 14px;border:3px solid #3a2a14;border-radius:10px;background:#e8cf93;color:#4a2f14;font:inherit;cursor:pointer}
+h3{margin:16px 0 6px;font-size:15px;opacity:.75}
+.it{display:flex;align-items:center;gap:8px;padding:10px 12px;margin-bottom:6px;background:#f6e6bf;border:2px solid #3a2a14;border-radius:10px}
+.it span{flex:1;word-break:break-all}.it small{opacity:.6;font-weight:400}
+.it button{padding:4px 8px;font-size:12px;border-width:2px}
+.empty{opacity:.6;padding:20px;text-align:center}
+</style><script src="config.js"></script><script src="sync.js"></script></head><body>
+<div class="bar"><input id="q" placeholder="搜尋已完成的任務"><button id="cp">複製全部</button><button id="dl">下載 txt</button></div>
+<div id="out"></div>
+<script>
+(function(){
+var AK="td:archive",IK="td:items";
+function get(k,d){try{return JSON.parse(localStorage.getItem(k)||"")||d}catch(e){return d}}
+function p(n){return n<10?"0"+n:n}
+function day(t){var d=new Date(t);return d.getFullYear()+"/"+p(d.getMonth()+1)+"/"+p(d.getDate())}
+function hm(t){var d=new Date(t);return p(d.getHours())+":"+p(d.getMinutes())}
+function render(){
+  var a=get(AK,[]).slice().sort(function(x,y){return y.done-x.done}), q=document.getElementById("q").value.trim().toLowerCase();
+  var o=document.getElementById("out"); o.innerHTML=""; var last="",n=0;
+  a.forEach(function(it){
+    if(q&&it.t.toLowerCase().indexOf(q)<0) return; n++;
+    var d=day(it.done); if(d!==last){var h=document.createElement("h3");h.textContent=d;o.appendChild(h);last=d}
+    var r=document.createElement("div");r.className="it";
+    r.innerHTML="<span></span><small>"+hm(it.done)+"</small>";
+    r.firstChild.textContent="✔ "+it.t;
+    var b=document.createElement("button");b.textContent="還原";
+    b.onclick=function(){var l=get(AK,[]).filter(function(x){return x.id!==it.id});
+      var items=get(IK,[]);var i=items.findIndex(function(x){return !x.t.trim()});
+      var ni={t:it.t,d:false,id:it.id};if(i>=0)items[i]=ni;else items.push(ni);
+      localStorage.setItem(IK,JSON.stringify(items));localStorage.setItem(AK,JSON.stringify(l));render()};
+    r.appendChild(b);o.appendChild(r)});
+  if(!n){o.innerHTML='<div class="empty">'+(q?"找不到符合的任務":"還沒有封存的任務<br>勾選完成後 30 分鐘會自動移到這裡")+'</div>'}
+}
+function txt(){return get(AK,[]).sort(function(x,y){return y.done-x.done}).map(function(i){return day(i.done)+" "+hm(i.done)+"　"+i.t}).join("\n")}
+document.getElementById("q").oninput=render;
+document.getElementById("cp").onclick=function(){var t=txt(),b=this;(navigator.clipboard?navigator.clipboard.writeText(t):Promise.reject()).then(function(){b.textContent="已複製"},function(){prompt("複製：",t)});setTimeout(function(){b.textContent="複製全部"},1500)};
+document.getElementById("dl").onclick=function(){var a=document.createElement("a");a.href=URL.createObjectURL(new Blob([txt()],{type:"text/plain"}));a.download="todo-archive.txt";a.click()};
+addEventListener("storage",render);setInterval(render,5000);render();
+})();
+</script></body></html>
