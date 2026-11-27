@@ -14,7 +14,7 @@
   var fresh=true; try{ for(var j=0;j<LS.length;j++) if(synced(LS.key(j))){ fresh=false; break; } }catch(e){}
   var de=document.documentElement;
   function reveal(){ de.style.visibility=""; }
-  if(fresh){ de.style.visibility="hidden"; setTimeout(reveal,2500); }
+  de.style.visibility="hidden"; setTimeout(reveal,3000);
   try{ for(var i=0;i<LS.length;i++){ var k=LS.key(i); if(synced(k)&&ts[k]==null) ts[k]=Date.now(); } saveTs(); }catch(e){}
   Storage.prototype.setItem=function(k,v){
     if(this===LS&&synced(k)){
@@ -54,9 +54,13 @@
       var p=has?fetch(URL,{method:"POST",redirect:"follow",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(up)}).then(function(r){return r.text();}):Promise.resolve();
       return p.then(function(){
         ready=true; var f=first; first=false;
+        if(changed&&window.SYNC_NO_RELOAD&&!f){ try{ window.dispatchEvent(new Event("sync-applied")); }catch(e){} }
         if(changed&&!window.SYNC_NO_RELOAD&&!rl){ rl=true;
           if(f&&recent().length<3) doReload(true); else setTimeout(doReload,waitMs());
-        } else if(f) reveal();
+        } else if(f){
+          if(changed){ try{ window.dispatchEvent(new Event("sync-applied")); }catch(e){} }
+          requestAnimationFrame(reveal);
+        }
       });
     }).catch(function(){ ready=true; if(first){ first=false; reveal(); } }).then(function(){ busy=false; if(again){ again=false; later(); } });
   }
